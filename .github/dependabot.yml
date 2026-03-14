@@ -1,30 +1,38 @@
+---
 version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/apps/web"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
   - package-ecosystem: "npm"
     directory: "/services/gateway"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
   - package-ecosystem: "npm"
     directory: "/services/identity"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
   - package-ecosystem: "npm"
     directory: "/services/orders"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
   - package-ecosystem: "pip"
     directory: "/services/comments"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
   - package-ecosystem: "pip"
     directory: "/services/payments-mock"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
