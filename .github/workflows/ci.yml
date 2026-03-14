@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: ["main", "master"]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   node-services:
     runs-on: ubuntu-latest
@@ -71,14 +68,25 @@ jobs:
         working-directory: services/catalog-laravel
     steps:
       - uses: actions/checkout@v6
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          coverage: pcov
-          extensions: mbstring, pdo_sqlite, sqlite3
-      - run: cp .env.example .env
-      - run: composer install --no-interaction --prefer-dist
-      - run: php artisan test --coverage-clover coverage.xml
+      - name: Run Laravel tests in PHP 8.4 container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace/services/catalog-laravel \
+            php:8.4-cli-bookworm@sha256:e098af62ecd043f652a3bb143e917d4af6dacd98f1f05c0bb77811998d0c1c3d \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends curl git unzip libonig-dev libsqlite3-dev
+              rm -rf /var/lib/apt/lists/*
+              docker-php-ext-install mbstring pdo_sqlite sqlite3
+              pecl install pcov
+              docker-php-ext-enable pcov
+              curl -fsSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+              cp .env.example .env
+              composer install --no-interaction --prefer-dist
+              php artisan test --coverage-clover coverage.xml
+            '
       - uses: actions/upload-artifact@v7
         with:
           name: catalog-laravel-coverage
@@ -137,11 +145,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          path: .
-          format: spdx-json
-          output-file: sbom.spdx.json
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            anchore/syft@sha256:15952b4306fd990724afaaf7f1c71fcd03546b89fbf6f2d32b0be5f81e3ef431 \
+            scan dir:/src -q -o spdx-json=/src/sbom.spdx.json
       - uses: actions/upload-artifact@v7
         with:
           name: sbom
