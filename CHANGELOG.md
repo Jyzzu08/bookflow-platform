@@ -11,6 +11,7 @@ All notable changes to this project are documented here.
 - Docker Compose stack with PostgreSQL, MySQL, MongoDB, Redis, RabbitMQ, Meilisearch, and observability tooling
 - OpenAPI specs, Postman collection, smoke tests, contract tests, and E2E scripts
 - GitHub Actions CI, Dependabot configuration, repository standards, and release documentation
+- Laravel feature tests, expanded Node route coverage, and production deployment assets for public demo publication
 
 ## [0.4.0] - 2026-03-14
 ### Added

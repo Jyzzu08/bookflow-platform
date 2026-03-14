@@ -61,6 +61,26 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m py_compile app/main.py
 
+  catalog-laravel:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/catalog-laravel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: pcov
+          extensions: mbstring, pdo_sqlite, sqlite3
+      - run: cp .env.example .env
+      - run: composer install --no-interaction --prefer-dist
+      - run: php artisan test --coverage-clover coverage.xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catalog-laravel-coverage
+          path: services/catalog-laravel/coverage.xml
+
   docker-compose-validate:
     runs-on: ubuntu-latest
     steps:

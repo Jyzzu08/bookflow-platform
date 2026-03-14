@@ -63,6 +63,12 @@ powershell -ExecutionPolicy Bypass -File scripts/contract-test.ps1
 powershell -ExecutionPolicy Bypass -File scripts/e2e-test.ps1
 ```
 
+### Despliegue publico
+- Despliegue productivo preparado en [infra/deploy/production-compose.yml](infra/deploy/production-compose.yml)
+- Reverse proxy TLS en [infra/deploy/caddy/Caddyfile](infra/deploy/caddy/Caddyfile)
+- Variables de entorno de produccion en [.env.production.example](.env.production.example)
+- Guia paso a paso en [docs/deployment.md](docs/deployment.md)
+
 ## EN
 
 BookFlow Platform is a portfolio-grade microservices system that upgrades the original demo into a production-style showcase. It preserves legacy behavior, adds modern `v2` contracts, and demonstrates secure integration, observability, and delivery workflows.
@@ -93,6 +99,7 @@ BookFlow Platform is a portfolio-grade microservices system that upgrades the or
 - [Postman Collection](docs/contracts/postman-bookflow.json)
 - [Release Notes](docs/releases)
 - [Release Roadmap](docs/releases/ROADMAP.md)
+- [Deployment Guide](docs/deployment.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)

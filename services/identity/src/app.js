@@ -1,31 +1,36 @@
 const Fastify = require('fastify');
 const cors = require('@fastify/cors');
 const { z } = require('zod');
-const {
-  pool,
-  initDatabase,
-  initRedis,
-  signAccessToken,
-  signRefreshToken,
-  persistRefreshToken,
-  revokeRefreshToken,
-  hasRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken,
-  randomUUID,
-  bcrypt
-} = require('./store');
+const baseStore = require('./store');
 
 const credentialsSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1)
 });
 
-async function createApp() {
+async function createApp(options = {}) {
+  const store = {
+    ...baseStore,
+    ...(options.store || {})
+  };
+  const {
+    pool,
+    initDatabase,
+    initRedis,
+    signAccessToken,
+    signRefreshToken,
+    persistRefreshToken,
+    revokeRefreshToken,
+    hasRefreshToken,
+    verifyAccessToken,
+    verifyRefreshToken,
+    randomUUID,
+    bcrypt
+  } = store;
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
 
-  const skipExternalInit = process.env.SKIP_EXTERNAL_INIT === '1';
+  const skipExternalInit = options.skipExternalInit ?? process.env.SKIP_EXTERNAL_INIT === '1';
   if (!skipExternalInit) {
     await initDatabase();
     await initRedis();

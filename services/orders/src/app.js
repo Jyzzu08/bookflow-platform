@@ -44,11 +44,19 @@ async function publish(eventKey, payload) {
 }
 
 async function createApp() {
+  return createAppWithOptions();
+}
+
+async function createAppWithOptions(options = {}) {
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
+  const dbPool = options.pool || pool;
+  const publishEvent = options.publish || publish;
+  const generateOrderId = options.randomUUID || randomUUID;
+  const skipExternalInit = options.skipExternalInit ?? process.env.SKIP_EXTERNAL_INIT === '1';
 
-  if (process.env.SKIP_EXTERNAL_INIT !== '1') {
-    await pool.query(`
+  if (!skipExternalInit) {
+    await dbPool.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -60,7 +68,9 @@ async function createApp() {
     `);
   }
 
-  await connectBus(app.log);
+  if (!skipExternalInit) {
+    await connectBus(app.log);
+  }
 
   app.get('/health', async () => ({ service: 'orders', status: 'ok' }));
 
@@ -70,10 +80,10 @@ async function createApp() {
       return reply.code(400).send({ error: 'invalid_order_payload' });
     }
 
-    const orderId = randomUUID();
+    const orderId = generateOrderId();
     const payload = parsed.data;
 
-    await pool.query(
+    await dbPool.query(
       'INSERT INTO orders (id, user_id, items, total, status) VALUES ($1, $2, $3, $4, $5)',
       [orderId, payload.userId, JSON.stringify(payload.items), payload.total, 'created']
     );
@@ -85,7 +95,7 @@ async function createApp() {
       items: payload.items
     };
 
-    await publish('order.created', eventPayload);
+    await publishEvent('order.created', eventPayload);
 
     return reply.code(201).send({
       id: orderId,
@@ -95,7 +105,7 @@ async function createApp() {
   });
 
   app.get('/v2/orders', async () => {
-    const { rows } = await pool.query('SELECT id, user_id, items, total, status, created_at FROM orders ORDER BY created_at DESC LIMIT 100');
+    const { rows } = await dbPool.query('SELECT id, user_id, items, total, status, created_at FROM orders ORDER BY created_at DESC LIMIT 100');
     return rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
@@ -109,4 +119,7 @@ async function createApp() {
   return app;
 }
 
-module.exports = { createApp };
+module.exports = {
+  createApp,
+  createAppWithOptions
+};

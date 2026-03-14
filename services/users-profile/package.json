@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
     "lint": "node -e \"console.log('lint: users-profile OK')\""
   },
   "dependencies": {

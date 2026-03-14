@@ -14,13 +14,14 @@ const profileSchema = z.object({
   location: z.string().optional().default('')
 });
 
-async function createApp() {
+async function createApp(options = {}) {
   const app = Fastify({ logger: true });
   await app.register(cors, { origin: true });
+  const dbPool = options.pool || pool;
 
-  const skipExternalInit = process.env.SKIP_EXTERNAL_INIT === '1';
+  const skipExternalInit = options.skipExternalInit ?? process.env.SKIP_EXTERNAL_INIT === '1';
   if (!skipExternalInit) {
-    await pool.query(`
+    await dbPool.query(`
       CREATE TABLE IF NOT EXISTS profiles (
         user_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
@@ -48,7 +49,7 @@ async function createApp() {
 
     const { userId, displayName, bio, location } = parsed.data;
 
-    await pool.query(
+    await dbPool.query(
       `INSERT INTO profiles (user_id, display_name, bio, location, updated_at)
        VALUES ($1, $2, $3, $4, NOW())
        ON CONFLICT (user_id)
@@ -60,7 +61,7 @@ async function createApp() {
   });
 
   app.get('/v2/users/:userId/profile', async (request, reply) => {
-    const { rows } = await pool.query('SELECT * FROM profiles WHERE user_id = $1 LIMIT 1', [request.params.userId]);
+    const { rows } = await dbPool.query('SELECT * FROM profiles WHERE user_id = $1 LIMIT 1', [request.params.userId]);
     if (!rows[0]) {
       return reply.code(404).send({ error: 'profile_not_found' });
     }

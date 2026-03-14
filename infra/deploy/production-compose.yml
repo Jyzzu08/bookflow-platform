@@ -1,0 +1,203 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: bookflow-caddy
+    restart: unless-stopped
+    environment:
+      - PUBLIC_WEB_HOST=${PUBLIC_WEB_HOST}
+      - PUBLIC_API_HOST=${PUBLIC_API_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - gateway
+
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: https://${PUBLIC_API_HOST}
+    container_name: bookflow-web-prod
+    restart: unless-stopped
+
+  gateway:
+    build: ../../services/gateway
+    container_name: bookflow-gateway-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - IDENTITY_BASE_URL=http://identity:3001
+      - CATALOG_BASE_URL=http://catalog:80
+      - COMMENTS_BASE_URL=http://comments:8001
+      - ORDERS_BASE_URL=http://orders:3003
+      - PAYMENTS_BASE_URL=http://payments-mock:8002
+      - SEARCH_BASE_URL=http://search-index:3004
+    depends_on:
+      - identity
+      - catalog
+      - comments
+      - orders
+      - payments-mock
+      - search-index
+
+  identity:
+    build: ../../services/identity
+    container_name: bookflow-identity-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - IDENTITY_DB_URL=postgres://bookflow:bookflow@postgres:5432/bookflow
+      - IDENTITY_REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  users-profile:
+    build: ../../services/users-profile
+    container_name: bookflow-users-profile-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - USERS_DB_URL=postgres://bookflow:bookflow@postgres:5432/bookflow
+    depends_on:
+      - postgres
+
+  orders:
+    build: ../../services/orders
+    container_name: bookflow-orders-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - ORDERS_DB_URL=postgres://bookflow:bookflow@postgres:5432/bookflow
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  search-index:
+    build: ../../services/search-index
+    container_name: bookflow-search-index-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    depends_on:
+      - meilisearch
+
+  notifications:
+    build: ../../services/notifications
+    container_name: bookflow-notifications-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+
+  comments:
+    build: ../../services/comments
+    container_name: bookflow-comments-prod
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+      - MONGO_DB=bookflow_comments
+    depends_on:
+      - mongo
+
+  payments-mock:
+    build: ../../services/payments-mock
+    container_name: bookflow-payments-mock-prod
+    restart: unless-stopped
+
+  catalog:
+    build: ../../services/catalog-laravel
+    container_name: bookflow-catalog-prod
+    restart: unless-stopped
+    env_file:
+      - ../../.env.production
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${CATALOG_APP_KEY}
+      - APP_URL=https://${PUBLIC_API_HOST}
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=bookflow_catalog
+      - DB_USERNAME=bookflow
+      - DB_PASSWORD=bookflow
+    depends_on:
+      - mysql
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: bookflow-postgres-prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=bookflow
+      - POSTGRES_PASSWORD=bookflow
+      - POSTGRES_DB=bookflow
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+  mysql:
+    image: mysql:8.4
+    container_name: bookflow-mysql-prod
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=bookflow_catalog
+      - MYSQL_USER=bookflow
+      - MYSQL_PASSWORD=bookflow
+    volumes:
+      - mysql_prod_data:/var/lib/mysql
+
+  mongo:
+    image: mongo:7
+    container_name: bookflow-mongo-prod
+    restart: unless-stopped
+    volumes:
+      - mongo_prod_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: bookflow-redis-prod
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: bookflow-rabbitmq-prod
+    restart: unless-stopped
+    volumes:
+      - rabbitmq_prod_data:/var/lib/rabbitmq
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: bookflow-meilisearch-prod
+    restart: unless-stopped
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    volumes:
+      - meili_prod_data:/meili_data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_prod_data:
+  mysql_prod_data:
+  mongo_prod_data:
+  rabbitmq_prod_data:
+  meili_prod_data:
