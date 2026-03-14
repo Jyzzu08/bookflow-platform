@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [2.0.0] - 2026-03-14
+### Changed
+- Hardened CI so Docker Compose validation now provisions `.env` from `.env.example` on clean checkouts
+- Fixed the web build by adding Vite environment typing for `import.meta.env`
+- Upgraded legacy maintained services to safer dependency baselines, including Node 22 and Flask 2.3.x runtime support
+- Made Trivy enforcement explicit for `HIGH` and `CRITICAL` findings and refreshed vulnerable legacy lockfiles
+- Aligned release and local setup documentation with the stricter validation flow
+
 ## [1.0.0] - 2026-03-14
 ### Added
 - BookFlow Platform monorepo structure with `apps`, `services`, `infra`, `docs`, and `scripts`

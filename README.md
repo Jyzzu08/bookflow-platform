@@ -44,6 +44,7 @@ BookFlow Platform moderniza el proyecto original y lo convierte en una plataform
 
 ### Demo local
 ```bash
+cp .env.example .env
 docker compose up --build -d
 ```
 
@@ -57,6 +58,7 @@ Servicios clave:
 
 ### Validacion rapida
 ```powershell
+Copy-Item .env.example .env
 docker compose config
 powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1
 powershell -ExecutionPolicy Bypass -File scripts/contract-test.ps1

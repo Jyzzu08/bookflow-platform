@@ -1,8 +1,8 @@
 param(
   [string]$Repository,
-  [string]$Tag = "v1.0.0",
-  [string]$Name = "BookFlow Platform v1.0.0",
-  [string]$NotesFile = "docs/releases/v1.0.0.md"
+  [string]$Tag = "v2.0.0",
+  [string]$Name = "BookFlow Platform v2.0.0",
+  [string]$NotesFile = "docs/releases/v2.0.0.md"
 )
 
 $ErrorActionPreference = 'Stop'

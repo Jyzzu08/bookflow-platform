@@ -20,13 +20,13 @@ app.use(cors());
 app.use(express.urlencoded({extended: false}));
 app.use(express.json());
 
-mongoose.connect('mongodb://dev:dev@mongo/libritos', err => {
-    if(err) {
-        throw new Error(err);
-    }
-    
-    console.log('Connected to database...');
-} );
+mongoose.connect('mongodb://dev:dev@mongo/libritos')
+    .then(() => {
+        console.log('Connected to database...');
+    })
+    .catch((error) => {
+        throw error;
+    });
 
 app.get('/', (req, res) => {
     res.send('Hola mundo desde Docker!!');

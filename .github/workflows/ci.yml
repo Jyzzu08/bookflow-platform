@@ -85,6 +85,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare environment
+        run: cp .env.example .env
       - run: docker compose config
 
   integration-platform:

@@ -1,7 +1,7 @@
 {
   "name": "bookflow-platform",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "BookFlow Platform monorepo",
   "scripts": {
     "test": "npm --prefix services/gateway test && npm --prefix services/identity test && npm --prefix services/users-profile test && npm --prefix services/orders test && npm --prefix services/search-index test && npm --prefix apps/web test -- --run",
