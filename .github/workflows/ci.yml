@@ -77,9 +77,8 @@ jobs:
             bash -lc '
               set -euo pipefail
               apt-get update
-              apt-get install -y --no-install-recommends curl git unzip libonig-dev libsqlite3-dev
+              apt-get install -y --no-install-recommends curl git unzip
               rm -rf /var/lib/apt/lists/*
-              docker-php-ext-install mbstring pdo_sqlite sqlite3
               pecl install pcov
               docker-php-ext-enable pcov
               curl -fsSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
