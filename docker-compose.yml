@@ -1,77 +1,334 @@
-version: "3.2"
 services:
-  php:
-    container_name: 'php2'
-    build: './api_libros/php/'
-    networks:
-      - backend
-    volumes:
-      - ./api_libros/public_html/:/var/www/html/
-  apache:
-    container_name: 'apache2'
-    build: './api_libros/apache/'
-    depends_on:
-      - php
-      - mysql
-    networks:
-      - frontend
-      - backend
-    ports:
-      - "8080:80"
-    volumes:
-      - ./api_libros/public_html/:/var/www/html/
-  mysql:
-    container_name: 'mysql2'
-    image: mysql:5.6.40
-    networks:
-      - backend
+  gateway:
+    build: ./services/gateway
+    container_name: bookflow-gateway
+    env_file: .env
     environment:
-      - MYSQL_ROOT_PASSWORD=rootpassword
-  node:
-    container_name: 'api_auth'
-    build: 'api_usuarios'
-    networks:
-      - frontend
-      - backend
-    volumes:
-      - /api_usuarios:/usr/src/app/
+      - IDENTITY_BASE_URL=http://identity:3001
+      - CATALOG_BASE_URL=http://catalog:80
+      - COMMENTS_BASE_URL=http://comments:8001
+      - ORDERS_BASE_URL=http://orders:3003
+      - PAYMENTS_BASE_URL=http://payments-mock:8002
+      - SEARCH_BASE_URL=http://search-index:3004
+    ports:
+      - "8080:8080"
+    depends_on:
+      identity:
+        condition: service_healthy
+      catalog:
+        condition: service_healthy
+      comments:
+        condition: service_healthy
+      orders:
+        condition: service_healthy
+      payments-mock:
+        condition: service_healthy
+      search-index:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  identity:
+    build: ./services/identity
+    container_name: bookflow-identity
+    env_file: .env
+    environment:
+      - IDENTITY_DB_URL=postgres://bookflow:bookflow@postgres:5432/bookflow
+      - IDENTITY_REDIS_URL=redis://redis:6379
     ports:
       - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  users-profile:
+    build: ./services/users-profile
+    container_name: bookflow-users-profile
+    env_file: .env
+    environment:
+      - USERS_DB_URL=postgres://bookflow:bookflow@postgres:5432/bookflow
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  orders:
+    build: ./services/orders
+    container_name: bookflow-orders
+    env_file: .env
+    environment:
+      - ORDERS_DB_URL=postgres://bookflow:bookflow@postgres:5432/bookflow
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  search-index:
+    build: ./services/search-index
+    container_name: bookflow-search-index
+    env_file: .env
+    environment:
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-bookflow-master-key}
+    ports:
+      - "3004:3004"
+    depends_on:
+      meilisearch:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  notifications:
+    build: ./services/notifications
+    container_name: bookflow-notifications
+    env_file: .env
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3005:3005"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3005/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  comments:
+    build: ./services/comments
+    container_name: bookflow-comments
+    env_file: .env
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+      - MONGO_DB=bookflow_comments
+    ports:
+      - "8001:8001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  payments-mock:
+    build: ./services/payments-mock
+    container_name: bookflow-payments-mock
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  catalog:
+    build: ./services/catalog-laravel
+    container_name: bookflow-catalog
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${CATALOG_APP_KEY}
+      - APP_URL=http://localhost:8081
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=bookflow_catalog
+      - DB_USERNAME=bookflow
+      - DB_PASSWORD=bookflow
+    ports:
+      - "8081:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "echo file_get_contents('http://127.0.0.1/health');"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: ./apps/web
+    container_name: bookflow-web
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
+    ports:
+      - "5173:5173"
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: bookflow-postgres
+    environment:
+      - POSTGRES_USER=bookflow
+      - POSTGRES_PASSWORD=bookflow
+      - POSTGRES_DB=bookflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookflow -d bookflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.4
+    container_name: bookflow-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=bookflow_catalog
+      - MYSQL_USER=bookflow
+      - MYSQL_PASSWORD=bookflow
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   mongo:
-    image: mongo
-    container_name: mongo
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: 123qwe
-      MONGO_INITDB_DATABASE: plantitas
+    image: mongo:7
+    container_name: bookflow-mongo
     ports:
-      - 27017:27017
-    networks:
-      - frontend
-      - backend
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  mongo-express: 
-    image: mongo-express
-    restart: always
-    container_name: mongodb-ui
+  redis:
+    image: redis:7-alpine
+    container_name: bookflow-redis
     ports:
-      - 8081:8081
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: 123qwe
-    networks:
-      - frontend
-      - backend
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  test:
-    container_name: 'test'
-    build: './test/'
-    networks:
-      - frontend
-      - backend
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: bookflow-rabbitmq
     ports:
-      - "5555:5555"
-networks:
-  frontend:
-  backend:
+      - "5673:5672"
+      - "15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: bookflow-meilisearch
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-bookflow-master-key}
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: bookflow-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infra/otel/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4318:4318"
+    depends_on:
+      tempo:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: bookflow-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: bookflow-loki
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./infra/loki/config.yml:/etc/loki/config.yml:ro
+    ports:
+      - "3100:3100"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: bookflow-tempo
+    command: ["-config.file=/etc/tempo/config.yml"]
+    volumes:
+      - ./infra/tempo/config.yml:/etc/tempo/config.yml:ro
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: bookflow-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3006:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    volumes:
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  postgres_data:
+  mysql_data:
+  mongo_data:
+  meili_data:
+  grafana_data:

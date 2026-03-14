@@ -1,5 +1,26 @@
 node_modules
 .env
+# Monorepo
+dist
+build
+coverage
+.cache
+.turbo
+tmp
+logs
+*.log
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Docker/infra local
+.env
+docker-data/
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies

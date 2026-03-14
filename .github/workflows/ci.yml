@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  node-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [gateway, identity, users-profile, orders, search-index, notifications]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/${{ matrix.service }}/package.json
+      - run: npm install
+      - run: npm run lint
+      - run: npm test
+        env:
+          SKIP_EXTERNAL_INIT: '1'
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package.json
+      - run: npm install
+      - run: npm run lint
+      - run: npm run test -- --run
+      - run: npm run build
+
+  python-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [comments, payments-mock]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile app/main.py
+
+  docker-compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config
+
+  integration-platform:
+    runs-on: ubuntu-latest
+    needs: [docker-compose-validate]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare environment
+        run: cp .env.example .env
+      - name: Start platform
+        run: docker compose up --build -d
+      - name: Wait for health
+        run: sleep 45
+      - name: Smoke validation
+        shell: pwsh
+        run: ./scripts/smoke.ps1
+      - name: Contract validation
+        shell: pwsh
+        run: ./scripts/contract-test.ps1
+      - name: End-to-end validation
+        shell: pwsh
+        run: ./scripts/e2e-test.ps1
+      - name: Shutdown
+        if: always()
+        run: docker compose down -v
+
+  security-audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        path: [services/gateway, services/identity, services/users-profile, services/orders, services/search-index, services/notifications, apps/web]
+    defaults:
+      run:
+        working-directory: ${{ matrix.path }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm audit --audit-level=high || true
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json

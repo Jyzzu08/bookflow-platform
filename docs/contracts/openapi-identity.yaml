@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Identity Service API
+  version: 1.0.0
+paths:
+  /register:
+    post:
+      summary: Legacy register
+      responses:
+        '200':
+          description: Registered
+  /auth:
+    post:
+      summary: Legacy auth
+      responses:
+        '200':
+          description: Authenticated
+  /v2/auth/login:
+    post:
+      summary: Login
+      responses:
+        '200':
+          description: Session
+  /v2/auth/refresh:
+    post:
+      summary: Refresh
+      responses:
+        '200':
+          description: Refreshed
+  /v2/auth/me:
+    get:
+      summary: Current user
+      responses:
+        '200':
+          description: User

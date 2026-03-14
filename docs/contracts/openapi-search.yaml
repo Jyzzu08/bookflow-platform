@@ -1,0 +1,16 @@
+openapi: 3.0.3
+info:
+  title: Search Service API
+  version: 1.0.0
+paths:
+  /v2/search:
+    get:
+      summary: Search indexed books
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search hits

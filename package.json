@@ -1,0 +1,14 @@
+{
+  "name": "bookflow-platform",
+  "private": true,
+  "version": "1.0.0",
+  "description": "BookFlow Platform monorepo",
+  "scripts": {
+    "test": "npm --prefix services/gateway test && npm --prefix services/identity test && npm --prefix services/users-profile test && npm --prefix services/orders test && npm --prefix services/search-index test && npm --prefix apps/web test -- --run",
+    "lint": "npm --prefix services/gateway run lint && npm --prefix services/identity run lint && npm --prefix services/users-profile run lint && npm --prefix services/orders run lint && npm --prefix services/search-index run lint && npm --prefix apps/web run lint",
+    "smoke": "powershell -ExecutionPolicy Bypass -File scripts/smoke.ps1",
+    "contract": "powershell -ExecutionPolicy Bypass -File scripts/contract-test.ps1",
+    "e2e": "powershell -ExecutionPolicy Bypass -File scripts/e2e-test.ps1",
+    "release:tags": "powershell -ExecutionPolicy Bypass -File scripts/create-release-tags.ps1"
+  }
+}

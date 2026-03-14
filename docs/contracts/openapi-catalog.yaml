@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: Catalog Service API
+  version: 1.0.0
+paths:
+  /v1/get_all/{id_user}/{token}:
+    get:
+      summary: Legacy list by user
+      responses:
+        '200':
+          description: Legacy response
+  /v2/catalog/books:
+    get:
+      summary: List books
+      responses:
+        '200':
+          description: Books
+    post:
+      summary: Create book
+      responses:
+        '201':
+          description: Created

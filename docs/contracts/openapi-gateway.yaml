@@ -1,0 +1,116 @@
+openapi: 3.0.3
+info:
+  title: BookFlow Gateway API
+  version: 1.0.0
+  description: Legacy-compatible v1 and modern v2 routes.
+servers:
+  - url: http://localhost:8080
+paths:
+  /register:
+    post:
+      summary: Legacy register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthInput'
+      responses:
+        '200':
+          description: Registered
+  /auth:
+    post:
+      summary: Legacy auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthInput'
+      responses:
+        '200':
+          description: Authenticated
+  /get-user-info:
+    get:
+      summary: Legacy user info
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User info
+  /v2/auth/login:
+    post:
+      summary: Login v2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthInput'
+      responses:
+        '200':
+          description: Session tokens
+  /v2/auth/refresh:
+    post:
+      summary: Refresh access token
+      responses:
+        '200':
+          description: New session tokens
+  /v2/catalog/books:
+    get:
+      summary: List books
+      responses:
+        '200':
+          description: Book list
+  /v2/comments:
+    get:
+      summary: List comments
+      responses:
+        '200':
+          description: Comments
+    post:
+      summary: Create comment
+      responses:
+        '201':
+          description: Created comment
+  /v2/orders:
+    get:
+      summary: List orders
+      responses:
+        '200':
+          description: Orders
+    post:
+      summary: Create order
+      responses:
+        '201':
+          description: Created order
+  /v2/payments:
+    post:
+      summary: Create payment mock
+      responses:
+        '201':
+          description: Payment result
+  /v2/search:
+    get:
+      summary: Search books
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search hits
+components:
+  schemas:
+    AuthInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string

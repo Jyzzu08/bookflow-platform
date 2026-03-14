@@ -1,0 +1,20 @@
+{
+  "name": "@bookflow/identity",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "lint": "node -e \"console.log('lint: identity OK')\""
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "bcrypt": "^5.1.1",
+    "fastify": "^5.0.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "zod": "^3.23.8"
+  }
+}
